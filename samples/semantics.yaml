@@ -1,0 +1,21 @@
+group: atlas.generated.mongodb.com
+versions:
+  - v20231115
+  - v20241113
+globals:
+  - type: ID
+    id:
+      path: ".id"
+  - type: REFERENCE
+    ref:
+      path: ".groupId"
+      parentKind: group
+overrides:
+  AtlasThirdPartyIntegration:
+    - type: SECRET
+      secret:
+        name: "credentialsSecret"
+        fields:
+        - path: ".licenseKey"
+        - path: ".readToken"
+        - path: ".writeToken"

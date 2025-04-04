@@ -1,0 +1,22 @@
+apiVersion: v1
+data:
+    licenseKey: 3c41a2b6fd5e
+    readToken: 178234y1hdwu1
+    writeToken: 219u42390r8fpe2hf
+kind: Secret
+metadata:
+    name: atlasthirdpartyintegration-sample-secret
+---
+apiVersion: atlas.generated.mongodb.com/v1
+kind: AtlasThirdPartyIntegration
+metadata:
+    name: atlasthirdpartyintegration-sample
+spec:
+    v20241113:
+        accountId: 1a2b3c4d5e6f
+        credentialsSecret: atlasthirdpartyintegration-sample-secret
+        identifier:
+            id: 12345567890
+        references:
+            groupId: 12345667890
+        type: NEW_RELIC

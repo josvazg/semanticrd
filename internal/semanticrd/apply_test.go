@@ -2,10 +2,12 @@ package semanticrd_test
 
 import (
 	"bytes"
+	"strings"
 	"testing"
 
 	"github.com/josvazg/semanticrd/internal/semanticrd"
 	"github.com/stretchr/testify/assert"
+	"gopkg.in/yaml.v3"
 )
 
 func TestApply(t *testing.T) {
@@ -18,7 +20,7 @@ func TestApply(t *testing.T) {
 	}{
 		{
 			title: "sample 1",
-			input: `apiVersion: atlas.pre-generated.mongodb.com/v1
+			input: `apiVersion: atlas.generated.mongodb.com/v1
 kind: AtlasThirdPartyIntegration
 metadata:
   name: atlasthirdpartyintegration-sample
@@ -32,7 +34,7 @@ spec:
     readToken: 178234y1hdwu1
     writeToken: 219u42390r8fpe2hf
 `,
-            semantics: `group: atlas.generated.mongodb.com
+			semantics: `group: atlas.generated.mongodb.com
 versions:
   - v20231115
   - v20241113
@@ -54,23 +56,37 @@ overrides:
         - path: ".readToken"
         - path: ".writeToken"
 `,
-			want: `apiVersion: atlas.generated.mongodb.com/v1
+			want: `apiVersion: v1
+kind: Secret
+metadata:
+  name: atlasthirdpartyintegration-sample-secret
+data:
+  licenseKey: 3c41a2b6fd5e
+  readToken: 178234y1hdwu1
+  writeToken: 219u42390r8fpe2hf
+---
+apiVersion: atlas.generated.mongodb.com/v1
 kind: AtlasThirdPartyIntegration
 metadata:
   name: atlasthirdpartyintegration-sample
 spec:
-  id: 12345567890 # ID
-  groupId: 12345667890 # Ref Kind: group
-  type: NEW_RELIC
-  newRelic:
+  v20231115:
+    identifier:
+      id: 12345567890
+    references:
+      groupId: 12345667890
+    type: NEW_RELIC
     accountId: 1a2b3c4d5e6f
-    credentialsSecret: new-relic-secret`,
+    credentialsSecret: atlasthirdpartyintegration-sample-secret
+`,
 		},
 	} {
 		t.Run(tc.title, func(t *testing.T) {
 			out := bytes.NewBufferString("")
 			err := semanticrd.Apply(out, bytes.NewBufferString(tc.input), bytes.NewBufferString(tc.semantics))
-			assert.Equal(t, tc.want, out.String())
+			want := reencode(t, tc.want)
+			got := reencode(t, out.String())
+			assert.Equal(t, want, got)
 			if tc.wantErr != "" {
 				assert.ErrorContains(t, err, tc.wantErr)
 			} else {
@@ -78,4 +94,25 @@ spec:
 			}
 		})
 	}
+}
+
+func reencode(t *testing.T, ymls string) string {
+	objs := []map[string]interface{}{}
+	for _, yml := range strings.Split(ymls, "\n---\n") {
+		obj := map[string]interface{}{}
+		err := yaml.Unmarshal(([]byte)(yml), &obj)
+		if err != nil {
+			t.Fatalf("could not unmarshal %q: %v", yml, err)
+		}
+		objs = append(objs, obj)
+	}
+	outs := []string{}
+	for _, obj := range objs {
+		out, err := yaml.Marshal(obj)
+		if err != nil {
+			t.Fatalf("could not marshal %v: %v", obj, err)
+		}
+		outs = append(outs, string(out))
+	}
+	return strings.Join(outs, "\n---\n")
 }

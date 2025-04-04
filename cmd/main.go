@@ -36,6 +36,7 @@ func main() {
 	flag.StringVar(&input, "input", "crds.yaml", "input YAML to process")
 	flag.StringVar(&semantics, "semantics", "semantics.yaml", "semantics YAML to apply")
 	flag.StringVar(&output, "output", "crds-processes.yaml", "output YAML to produce")
+	flag.Parse()
 	err := apply(output, input, semantics)
 	if err != nil {
 		log.Fatalf("Failed to apply semantics %s on %s: %v", semantics, input, err)
