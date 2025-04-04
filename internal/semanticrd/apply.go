@@ -1,6 +1,7 @@
 package semanticrd
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -132,7 +133,7 @@ func (s Secret) apply(obj map[string]interface{}, version string) ([]map[string]
 		src := append([]string{"spec", version}, NewPath(field.Path)...)
 		_, found, _ := unstructured.NestedFieldNoCopy(obj, src...)
 		if !found {
-			return []map[string]interface{}{obj}, nil
+			return nil, nil
 		}
 	}
 	for _, field := range s.Fields {
@@ -144,7 +145,8 @@ func (s Secret) apply(obj map[string]interface{}, version string) ([]map[string]
 				strings.Join(src, "."), strings.Join(dst, "."), err)
 		}
 	}
-	if err := unstructured.SetNestedField(obj, secretName, "spec", version, s.Name); err != nil {
+	refDst := append([]string{"spec", version}, NewPath(s.Name)...)
+	if err := unstructured.SetNestedField(obj, secretName, refDst...); err != nil {
 		return nil, fmt.Errorf("failed to set secret ref %s to %s: %w", s.Name, secretName, err)
 	}
 	return []map[string]interface{}{secretCRD}, nil
@@ -167,21 +169,29 @@ func Apply(out io.Writer, in, semantics io.Reader) error {
 	}
 
 	inputDec := yaml.NewDecoder(in)
-	var crd map[string]interface{}
-	if err := inputDec.Decode(&crd); err != nil {
-		return fmt.Errorf("failed to parse input CRDs: %w", err)
-	}
+	for i := 0; ; i++ {
+		var crd map[string]interface{}
+		if err := inputDec.Decode(&crd); err != nil {
+			if errors.Is(err, io.EOF) {
+				break
+			}
+			return fmt.Errorf("failed to parse input CRDs: %w", err)
+		}
+		outputEnc := yaml.NewEncoder(out)
 
-	outputEnc := yaml.NewEncoder(out)
-
-	mappings := mappingsFor(rules, (crd["kind"]).(string))
-	outCRDs, err := apply(crd, rules.Versions, mappings)
-	if err != nil {
-		return fmt.Errorf("failed to apply rules: %w", err)
-	}
-	for _, outCRD := range outCRDs {
-		if err := outputEnc.Encode(outCRD); err != nil {
-			return fmt.Errorf("failed to decode output CRD: %w", err)
+		kind := (crd["kind"]).(string)
+		mappings := mappingsFor(rules, kind)
+		outCRDs, err := apply(crd, rules.Versions, mappings)
+		if err != nil {
+			return fmt.Errorf("failed to apply rules: %w", err)
+		}
+		if i != 0 {
+			out.Write(([]byte)("---\n"))
+		}
+		for _, outCRD := range outCRDs {
+			if err := outputEnc.Encode(outCRD); err != nil {
+				return fmt.Errorf("failed to decode output CRD: %w", err)
+			}
 		}
 	}
 	return nil

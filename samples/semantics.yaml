@@ -19,3 +19,10 @@ overrides:
         - path: ".licenseKey"
         - path: ".readToken"
         - path: ".writeToken"
+    - type: SECRET
+      secret:
+        name: ".datadog.credentialsSecret"
+        fields:
+        - path: ".datadog.licenseKey"
+        - path: ".datadog.readToken"
+        - path: ".datadog.writeToken"

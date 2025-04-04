@@ -3,7 +3,7 @@ kind: AtlasThirdPartyIntegration
 metadata:
   name: atlasthirdpartyintegration-sample
 spec:
-  v20241113:
+  v20231115:
     id: 12345567890
     groupId: 12345667890
     type: NEW_RELIC
@@ -11,3 +11,18 @@ spec:
     licenseKey: 3c41a2b6fd5e
     readToken: 178234y1hdwu1
     writeToken: 219u42390r8fpe2hf
+---
+apiVersion: atlas.generated.mongodb.com/v1
+kind: AtlasThirdPartyIntegration
+metadata:
+  name: atlasthirdpartyintegration-newer
+spec:
+  v20241113:
+    id: 12345567890
+    groupId: 12345667890
+    type: NEW_RELIC
+    datadog:
+      accountId: 1a2b3c4d5e6f
+      licenseKey: 3c41a2b6fd5e
+      readToken: 178234y1hdwu1
+      writeToken: 219u42390r8fpe2hf
